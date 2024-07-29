@@ -2,7 +2,8 @@ import { FetchOptions, FetchV2, SimpleAdapter } from "../../adapters/types";
 import { CHAIN } from "../../helpers/chains";
 import { addOneToken } from "../../helpers/prices";
 
-const INITIALIZE_EVENT_ABI = 'event Initialize(bytes32 id, address indexed currency0, address indexed currency1, uint24 fee, int24 tickSpacing, address hooks)';
+const INITIALIZE_LEGACY_EVENT_ABI = 'event Initialize(bytes32 id, address indexed currency0, address indexed currency1, uint24 fee, int24 tickSpacing, address hooks)';
+const INITIALIZE_EVENT_ABI = 'event Initialize(bytes32 id, address indexed currency0, address indexed currency1, uint24 fee, int24 tickSpacing, address hooks, uint160 sqrtPriceX96, int24 tick)';
 const SWAP_EVENT_ABI = "event Swap(bytes32 indexed id, address sender, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)";
 
 const CONFIG = {
@@ -11,12 +12,16 @@ const CONFIG = {
     router: "0x0Fee97363deEFBE4De038D437D805A98dbEbA400",
     fromBlock: 13704184,
     swapFee: 10000000000000n,
+    initializeEventAbi: INITIALIZE_LEGACY_EVENT_ABI,
+    swapEventAbi: SWAP_EVENT_ABI,
   },
   [CHAIN.BASE]: {
-    pool: "0xc08304a5300D9a2310A603b8D7fB8470f752947F",
-    router: "0x0Fee76f15DE74A5211e5Bc2aBF95394d7f50C400",
-    fromBlock: 14089843,
+    pool: "0xcdE68374C7AB5cf1DB8673D3Fc80937CC499E3a0",
+    router: "0x0Fee2fd9EBFD6B0f803FcDeF0230d53dEF910900",
+    fromBlock: 17713836,
     swapFee: 10000000000000n,
+    initializeEventAbi: INITIALIZE_EVENT_ABI,
+    swapEventAbi: SWAP_EVENT_ABI,
   },
 };
 
@@ -31,9 +36,9 @@ const getTokenPairs = async (options: FetchOptions): Promise<{[id:string]: Pair}
 
   const logs = await options.api.getLogs({
     target: config.pool,
-    eventAbi: INITIALIZE_EVENT_ABI,
+    eventAbi: config.initializeEventAbi,
     fromBlock: config.fromBlock,
-    toBlock: options.api.block,
+    toBlock: options.api.block as number,
     onlyArgs: true,
   });
 
@@ -53,7 +58,7 @@ const fetchVolume: FetchV2 = async (options: FetchOptions) => {
   const config = CONFIG[options.chain];
   const logs = await options.getLogs({
     target: config.pool,
-    eventAbi: SWAP_EVENT_ABI,
+    eventAbi: config.swapEventAbi,
   });
   logs.forEach((log: any) => {
     const [id,,amount0, amount1] = log;
@@ -84,7 +89,7 @@ const adapter: SimpleAdapter = {
     },
     [CHAIN.BASE]: {
       fetch: fetchVolume,
-      start: 1714939200,
+      start: 1722211200,
     },
   }
 }
